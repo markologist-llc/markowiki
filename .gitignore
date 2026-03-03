@@ -1,0 +1,12 @@
+# User data
+vaults.json
+
+# Dev binary
+markowiki-dev
+
+# Go build cache
+*.test
+
+# OS files
+.DS_Store
+Thumbs.db
