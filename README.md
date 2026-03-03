@@ -94,5 +94,5 @@ MIT — see [LICENSE](LICENSE)
 
 ## Author
 
-Created by [Nader Ereij](https://github.com/nader-ereij)  
+Created by [Nader Ereij](https://github.com/naderereij)
 A [Markologist LLC](https://github.com/markologist-llc) project
