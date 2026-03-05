@@ -1,8 +1,7 @@
 package main
 
-
 import (
-	_"embed"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -27,9 +26,21 @@ type Vault struct {
 	Path string `json:"path"`
 }
 
+type Settings struct {
+	Autosave      bool   `json:"autosave"`
+	AutosaveDelay int    `json:"autosave_delay"` // seconds
+	Dark          bool   `json:"dark"`
+	Accent        string `json:"accent"`
+}
+
+type Config struct {
+	Vaults   []Vault  `json:"vaults"`
+	Settings Settings `json:"settings"`
+}
+
 type TreeNode struct {
 	Name     string      `json:"name"`
-	Type     string      `json:"type"` // "file" or "folder"
+	Type     string      `json:"type"`
 	Path     string      `json:"path"`
 	Children []*TreeNode `json:"children,omitempty"`
 }
@@ -46,29 +57,48 @@ type SearchResult struct {
 
 func configPath() string {
 	if d := os.Getenv("MW_DATA_DIR"); d != "" {
-		return filepath.Join(d, "vaults.json")
+		return filepath.Join(d, "config.json")
 	}
 	exe, _ := os.Executable()
-	return filepath.Join(filepath.Dir(exe), "vaults.json")
+	return filepath.Join(filepath.Dir(exe), "config.json")
 }
 
-func loadVaults() ([]Vault, error) {
+func defaultConfig() Config {
+	return Config{
+		Vaults: []Vault{},
+		Settings: Settings{
+			Autosave:      false,
+			AutosaveDelay: 2,
+			Dark:          true,
+			Accent:        "forest",
+		},
+	}
+}
+
+func loadConfig() (Config, error) {
 	data, err := os.ReadFile(configPath())
 	if os.IsNotExist(err) {
-		return []Vault{}, nil
+		return defaultConfig(), nil
 	}
 	if err != nil {
-		return nil, err
+		return defaultConfig(), err
 	}
-	var vaults []Vault
-	if err := json.Unmarshal(data, &vaults); err != nil {
-		return nil, err
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return defaultConfig(), err
 	}
-	return vaults, nil
+	// Fill in missing settings with defaults
+	if cfg.Settings.Accent == "" {
+	cfg.Settings.Accent = "forest"
+	}
+	if cfg.Settings.AutosaveDelay == 0 {
+		cfg.Settings.AutosaveDelay = 2
+	}
+	return cfg, nil
 }
 
-func saveVaults(vaults []Vault) error {
-	data, err := json.MarshalIndent(vaults, "", "  ")
+func saveConfig(cfg Config) error {
+	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -76,11 +106,11 @@ func saveVaults(vaults []Vault) error {
 }
 
 func getVault(id string) (*Vault, error) {
-	vaults, err := loadVaults()
+	cfg, err := loadConfig()
 	if err != nil {
 		return nil, err
 	}
-	for _, v := range vaults {
+	for _, v := range cfg.Vaults {
 		if v.ID == id {
 			return &v, nil
 		}
@@ -121,10 +151,7 @@ func buildTree(base, current string) ([]*TreeNode, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var nodes []*TreeNode
-
-	// Folders first, then files
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), ".") {
 			continue
@@ -161,16 +188,17 @@ func buildTree(base, current string) ([]*TreeNode, error) {
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
+// GET/POST /api/vaults
 func handleVaults(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
-		vaults, err := loadVaults()
+		cfg, err := loadConfig()
 		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
-		writeJSON(w, 200, vaults)
+		writeJSON(w, 200, cfg.Vaults)
 
 	case http.MethodPost:
 		var body struct {
@@ -197,11 +225,11 @@ func handleVaults(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 400, "path does not exist or is not a directory: "+body.Path)
 			return
 		}
-		vaults, _ := loadVaults()
-		id := fmt.Sprintf("%s_%d", slugify(body.Name), len(vaults))
+		cfg, _ := loadConfig()
+		id := fmt.Sprintf("%s_%d", slugify(body.Name), len(cfg.Vaults))
 		vault := Vault{ID: id, Name: body.Name, Path: abs}
-		vaults = append(vaults, vault)
-		if err := saveVaults(vaults); err != nil {
+		cfg.Vaults = append(cfg.Vaults, vault)
+		if err := saveConfig(cfg); err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -212,28 +240,28 @@ func handleVaults(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DELETE /api/vaults/{id}
 func handleVaultDelete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		writeError(w, 405, "method not allowed")
 		return
 	}
 	id := strings.TrimPrefix(r.URL.Path, "/api/vaults/")
-	id = strings.TrimSuffix(id, "/tree")
-	vaults, _ := loadVaults()
-	filtered := vaults[:0]
-	for _, v := range vaults {
+	cfg, _ := loadConfig()
+	filtered := cfg.Vaults[:0]
+	for _, v := range cfg.Vaults {
 		if v.ID != id {
 			filtered = append(filtered, v)
 		}
 	}
-	saveVaults(filtered)
+	cfg.Vaults = filtered
+	saveConfig(cfg)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
+// GET /api/vaults/{id}/tree
 func handleVaultTree(w http.ResponseWriter, r *http.Request) {
-	// URL: /api/vaults/{id}/tree
 	parts := strings.Split(r.URL.Path, "/")
-	// parts: ["", "api", "vaults", "{id}", "tree"]
 	if len(parts) < 5 {
 		writeError(w, 400, "bad url")
 		return
@@ -255,24 +283,21 @@ func handleVaultTree(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, tree)
 }
 
+// GET/PUT/DELETE /api/file
 func handleFile(w http.ResponseWriter, r *http.Request) {
 	vaultID := r.URL.Query().Get("vault_id")
 	relPath := r.URL.Query().Get("path")
-
 	vault, _ := getVault(vaultID)
 	if vault == nil {
 		writeError(w, 404, "vault not found")
 		return
 	}
-
 	full, ok := safePath(vault.Path, relPath)
 	if !ok {
 		writeError(w, 403, "access denied")
 		return
 	}
-
 	switch r.Method {
-
 	case http.MethodGet:
 		data, err := os.ReadFile(full)
 		if err != nil {
@@ -280,7 +305,6 @@ func handleFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, 200, map[string]string{"content": string(data), "path": relPath})
-
 	case http.MethodPut:
 		var body struct {
 			Content string `json:"content"`
@@ -292,19 +316,18 @@ func handleFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, 200, map[string]bool{"ok": true})
-
 	case http.MethodDelete:
 		if err := os.Remove(full); err != nil {
 			writeError(w, 404, "file not found")
 			return
 		}
 		writeJSON(w, 200, map[string]bool{"ok": true})
-
 	default:
 		writeError(w, 405, "method not allowed")
 	}
 }
 
+// POST /api/file/create
 func handleFileCreate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, 405, "method not allowed")
@@ -335,14 +358,14 @@ func handleFileCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	os.MkdirAll(filepath.Dir(full), 0755)
 	title := strings.TrimSuffix(filepath.Base(rel), ".md")
-	content := fmt.Sprintf("# %s\n\n", title)
-	if err := os.WriteFile(full, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(full, []byte(fmt.Sprintf("# %s\n\n", title)), 0644); err != nil {
 		writeError(w, 500, err.Error())
 		return
 	}
 	writeJSON(w, 200, map[string]string{"path": rel})
 }
 
+// GET /api/search
 func handleSearch(w http.ResponseWriter, r *http.Request) {
 	q := strings.ToLower(r.URL.Query().Get("q"))
 	vaultID := r.URL.Query().Get("vault_id")
@@ -350,9 +373,9 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, []SearchResult{})
 		return
 	}
-	vaults, _ := loadVaults()
+	cfg, _ := loadConfig()
 	var results []SearchResult
-	for _, vault := range vaults {
+	for _, vault := range cfg.Vaults {
 		if vaultID != "" && vault.ID != vaultID {
 			continue
 		}
@@ -402,6 +425,38 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, results)
 }
 
+// GET/PUT /api/settings
+func handleSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+
+	case http.MethodGet:
+		cfg, err := loadConfig()
+		if err != nil {
+			writeError(w, 500, err.Error())
+			return
+		}
+		writeJSON(w, 200, cfg.Settings)
+
+	case http.MethodPut:
+		var s Settings
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			writeError(w, 400, "invalid JSON")
+			return
+		}
+		cfg, _ := loadConfig()
+		cfg.Settings = s
+		if err := saveConfig(cfg); err != nil {
+			writeError(w, 500, err.Error())
+			return
+		}
+		writeJSON(w, 200, cfg.Settings)
+
+	default:
+		writeError(w, 405, "method not allowed")
+	}
+}
+
+// GET / — serve embedded index.html
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(indexHTML)
@@ -410,8 +465,12 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 // ── Router ────────────────────────────────────────────────────────────────────
 
 func main() {
-	mux := http.NewServeMux()
+	if len(os.Args) > 1 && os.Args[1] == "--version" {
+		fmt.Printf("%s v%s\n", appName, version)
+		return
+	}
 
+	mux := http.NewServeMux()
 	mux.HandleFunc("/api/vaults", handleVaults)
 	mux.HandleFunc("/api/vaults/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/tree") {
@@ -423,16 +482,10 @@ func main() {
 	mux.HandleFunc("/api/file/create", handleFileCreate)
 	mux.HandleFunc("/api/file", handleFile)
 	mux.HandleFunc("/api/search", handleSearch)
+	mux.HandleFunc("/api/settings", handleSettings)
 	mux.HandleFunc("/", handleIndex)
 
 	port := "8000"
-
-	// Handle --version flag
-	if len(os.Args) > 1 && os.Args[1] == "--version" {
-		fmt.Printf("%s v%s\n", appName, version)
-	return
-	}
-
 	fmt.Printf("\n  %s v%s\n", appName, version)
 	fmt.Printf("  → http://localhost:%s\n\n", port)
 

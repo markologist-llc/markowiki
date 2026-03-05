@@ -103,6 +103,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .ac-swatch:hover{transform:scale(1.2)}
 .ac-swatch.active{border-color:var(--text);transform:scale(1.15)}
 
+/* Settings button */
+#settings-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px 6px;border-radius:4px;font-size:13px;transition:color var(--trans)}
+#settings-btn:hover{color:var(--accent)}
+/* Settings modal */
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border-bottom:none}
+.settings-label{font-size:13px;color:var(--text)}
+.settings-sub{font-size:11px;color:var(--text-dim);margin-top:2px}
+.settings-toggle{width:36px;height:20px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;position:relative;transition:background var(--trans);flex-shrink:0}
+.settings-toggle.on{background:var(--accent);border-color:var(--accent)}
+.settings-toggle-handle{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--text-dim);transition:transform var(--trans)}
+.settings-toggle.on .settings-toggle-handle{transform:translateX(16px);background:#fff}
+.settings-select{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-ui);font-size:12px;padding:4px 8px;outline:none;cursor:pointer}
+.settings-select:focus{border-color:var(--accent)}
+
 #save-indicator{font-size:11px;color:var(--text-muted);font-family:var(--font-mono)}
 #save-indicator.saved{color:var(--accent)}
 #save-indicator.unsaved{color:var(--accent-warm)}
@@ -131,7 +146,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 /* CodeMirror - fully controlled by our CSS variables */
 .CodeMirror{flex:1;height:100%!important;background:var(--bg)!important;color:var(--text)!important;font-family:var(--font-mono)!important;font-size:13.5px!important;line-height:1.7!important;border:none!important;padding:20px 28px!important}
-.CodeMirror-scroll{padding:8px 0}
+
+.CodeMirror-scroll{padding:8px 0;overflow-x:hidden!important;overflow-y:auto!important}
+.CodeMirror-scroll::-webkit-scrollbar{width:6px}
+.CodeMirror-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.CodeMirror-scroll::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+.CodeMirror-vscrollbar::-webkit-scrollbar{width:4px}
+.CodeMirror-vscrollbar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.CodeMirror-vscrollbar::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+.CodeMirror-vscrollbar::-webkit-scrollbar-track{background:transparent}
+
 .CodeMirror-cursor{border-left-color:var(--accent)!important}
 .CodeMirror-selected{background:rgba(163,196,110,.15)!important}
 .CodeMirror-focused .CodeMirror-selected{background:rgba(163,196,110,.2)!important}
@@ -149,9 +175,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .cm-operator,.cm-punctuation{color:var(--text-dim)!important}
 .cm-variable,.cm-variable-2{color:var(--accent-light)!important}
 .cm-def,.cm-builtin{color:var(--accent)!important}
+
 .cm-tag{color:var(--accent)!important}
 .cm-bracket{color:var(--accent-dim)!important}
-.cm-tag.cm-bracket{color:var(--accent-dim)!important}
+
 .cm-attribute{color:var(--accent-light)!important}
 .cm-atom{color:var(--accent-warm)!important}
 .cm-hr{color:var(--text-muted)!important}
@@ -201,7 +228,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #preview-content details>*:not(summary){padding:12px 16px}
 #preview-content input[type="checkbox"]{margin-right:6px;accent-color:var(--accent)}
 .katex-display{direction:ltr;text-align:center;padding:16px 20px;overflow-x:auto;color:var(--text);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1em}
-
 /* Status bar */
 #statusbar{height:var(--status-h);display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-top:1px solid var(--border);background:var(--bg2);font-size:11px;color:var(--text-muted);font-family:var(--font-mono);flex-shrink:0}
 #statusbar.hidden{display:none}
@@ -278,6 +304,7 @@ kbd{font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px
           <div class="ac-swatch" data-accent="mono"   style="background:#8a9080" title="Mono"></div>
         </div>
         <div class="dm-toggle" id="dm-toggle" title="Dark / Light mode"><div class="dm-handle"></div></div>
+        <button id="settings-btn" title="Settings"><i class="fa-solid fa-gear"></i></button>
         <div class="view-tabs">
           <button class="view-tab" data-mode="editor">Edit</button>
           <button class="view-tab active" data-mode="split">Split</button>
@@ -362,6 +389,26 @@ kbd{font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px
   </div>
 </div>
 
+<!-- Settings Modal -->
+<div class="moverlay" id="st-overlay">
+  <div class="mbox" style="width:460px">
+    <h3>Settings</h3>
+    <div class="settings-row">
+      <div><div class="settings-label">Auto-save</div><div class="settings-sub">Automatically save after you stop typing</div></div>
+      <div class="settings-toggle" id="st-autosave"><div class="settings-toggle-handle"></div></div>
+    </div>
+    <div class="settings-row" id="st-delay-row">
+      <div><div class="settings-label">Auto-save delay</div><div class="settings-sub">How long to wait after last keystroke</div></div>
+      <select class="settings-select" id="st-delay">
+        <option value="1">1 second</option>
+        <option value="2">2 seconds</option>
+        <option value="5">5 seconds</option>
+      </select>
+    </div>
+    <div class="mactions"><button class="top-btn primary" id="st-ok">Save Settings</button><button class="top-btn" id="st-cancel">Cancel</button></div>
+  </div>
+</div>
+
 <!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/markdown/markdown.min.js"></script>
@@ -376,10 +423,10 @@ kbd{font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js"></script>
 <script>
 const S={
-  vaults:[],activeVault:null,activeFile:null,dirty:false,searchTO:null,
+  vaults:[],activeVault:null,activeFile:null,dirty:false,loading:false,searchTO:null,autosaveTO:null,
   viewMode:'split',openFolders:new Set(),cm:null,
-  dark:localStorage.getItem('mw_dark')!=='0',
-  accent:localStorage.getItem('mw_accent')||'forest'
+  dark:true,accent:'forest',
+  autosave:false,autosaveDelay:2
 };
 const $=id=>document.getElementById(id);
 
@@ -388,7 +435,6 @@ async function api(m,p,b){const o={method:m,headers:{'Content-Type':'application
 function initCM(){
   CodeMirror.defineMode('mdmath',cfg=>{
     const md=CodeMirror.getMode(cfg,'markdown');
-
     const ov={startState:()=>({inCode:false,inMath:false,inMI:false}),token(s,st){
       if(s.match(/^```/)){st.inCode=!st.inCode;return'comment'}
       if(st.inCode){s.skipToEnd();return'comment'}
@@ -399,16 +445,14 @@ function initCM(){
       if(s.match(/^<\/?[a-zA-Z][a-zA-Z0-9]*[^>]*>/)){return'tag'}
       s.next();return null
     }};
-
-
     return CodeMirror.overlayMode(md,ov);
   });
   S.cm=CodeMirror.fromTextArea($('cm-host'),{
-    mode:'mdmath',lineNumbers:false,lineWrapping:true,scrollbarStyle:null,
-    theme:'default',autofocus:false,viewportMargin:Infinity,
+  mode:'mdmath',lineNumbers:false,lineWrapping:true,scrollbarStyle:'native',
+  theme:'default',autofocus:false,viewportMargin:Infinity,
     extraKeys:{'Enter':'newlineAndIndentContinueMarkdownList','Ctrl-S':()=>saveFile(),'Ctrl-B':cm=>fmt(cm,'bold'),'Ctrl-I':cm=>fmt(cm,'italic'),'Ctrl-L':cm=>fmt(cm,'link'),'Ctrl-F':'find','Ctrl-H':'replace'}
   });
-  S.cm.on('change',()=>{setUnsaved();updatePreview()});
+  S.cm.on('change',()=>{if(S.loading)return;setUnsaved();updatePreview();triggerAutosave()});
   S.cm.on('cursorActivity',updateCursor);
 }
 
@@ -439,8 +483,8 @@ const accentMap={
   rose:  {accent:'#c46e9a',light:'#e09cc0',dim:'#8a3a68',muted:'#4a1530',warm:'#c9a84c'},
   mono:  {accent:'#8a9080',light:'#b0b8a8',dim:'#5a6050',muted:'#2a3025',warm:'#a09880'}
 };
-function applyAccent(name){
-  S.accent=name;localStorage.setItem('mw_accent',name);
+function applyAccent(name,save=true){
+  S.accent=name;
   const a=accentMap[name]||accentMap.forest;
   const r=document.documentElement;
   r.style.setProperty('--accent',a.accent);
@@ -448,24 +492,66 @@ function applyAccent(name){
   r.style.setProperty('--accent-dim',a.dim);
   r.style.setProperty('--accent-muted',a.muted);
   r.style.setProperty('--accent-warm',a.warm);
-  // Remove all accent classes then add new one
   document.body.classList.remove('accent-amber','accent-ocean','accent-rose','accent-mono');
   if(name!=='forest')document.body.classList.add('accent-'+name);
   document.querySelectorAll('.ac-swatch').forEach(s=>s.classList.toggle('active',s.dataset.accent===name));
+  if(save)saveSettings();
 }
 document.querySelectorAll('.ac-swatch').forEach(s=>s.addEventListener('click',()=>applyAccent(s.dataset.accent)));
 applyAccent(S.accent);
 
 // Dark/Light
-function applyDark(on){
+function applyDark(on,save=true){
   S.dark=on;
   document.body.classList.toggle('light',!on);
   $('dm-toggle').classList.toggle('on',on);
-  localStorage.setItem('mw_dark',on?'1':'0');
+  if(save)saveSettings();
   if(S.cm)setTimeout(()=>S.cm&&S.cm.refresh(),30);
 }
-applyDark(S.dark);
+applyDark(S.dark,false);
 $('dm-toggle').addEventListener('click',()=>applyDark(!S.dark));
+
+// Settings API
+async function saveSettings(){
+  try{await api('PUT','/api/settings',{autosave:S.autosave,autosave_delay:S.autosaveDelay,dark:S.dark,accent:S.accent})}catch(e){console.warn('Settings save failed',e)}
+}
+async function loadSettings(){
+  try{
+    const s=await api('GET','/api/settings');
+    S.autosave=s.autosave||false;
+    S.autosaveDelay=s.autosave_delay||2;
+    applyDark(s.dark!==false,false);
+    applyAccent(s.accent||'forest',false);
+  }catch(e){console.warn('Settings load failed',e)}
+}
+
+// Auto-save
+function triggerAutosave(){
+  if(!S.autosave)return;
+  clearTimeout(S.autosaveTO);
+  S.autosaveTO=setTimeout(()=>{if(S.dirty)saveFile()},S.autosaveDelay*1000);
+}
+
+// Settings modal
+$('settings-btn').addEventListener('click',()=>{
+  $('st-autosave').classList.toggle('on',S.autosave);
+  $('st-delay').value=S.autosaveDelay;
+  $('st-delay-row').style.opacity=S.autosave?'1':'0.4';
+  showM('st-overlay');
+});
+$('st-autosave').addEventListener('click',()=>{
+  const on=!$('st-autosave').classList.contains('on');
+  $('st-autosave').classList.toggle('on',on);
+  $('st-delay-row').style.opacity=on?'1':'0.4';
+});
+$('st-cancel').addEventListener('click',()=>hideM('st-overlay'));
+$('st-ok').addEventListener('click',()=>{
+  S.autosave=$('st-autosave').classList.contains('on');
+  S.autosaveDelay=parseInt($('st-delay').value)||2;
+  saveSettings();
+  hideM('st-overlay');
+});
+$('st-overlay').addEventListener('click',e=>{if(e.target===$('st-overlay'))hideM('st-overlay')});
 
 // Preview
 function updatePreview(){
@@ -522,7 +608,10 @@ async function openFile(v,path){
   const d=await api('GET',`/api/file?vault_id=${v.id}&path=${encodeURIComponent(path)}`);
   S.activeVault=v;S.activeFile=path;S.dirty=false;
   if(!S.cm)initCM();
-  S.cm.setValue(d.content);updatePreview();showEditorPane();updateBC();setSaved();hilite();
+  S.loading=true;
+  S.cm.setValue(d.content);
+  S.loading=false;
+  updatePreview();showEditorPane();updateBC();setSaved();hilite();
   $('statusbar').classList.remove('hidden');$('status-file').textContent=`${v.name} › ${path}`;updateCursor();
   setTimeout(()=>S.cm.refresh(),50);
 }
@@ -572,10 +661,10 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='k'){e.preventDefault();$('search-input').focus();$('search-input').select()}
   if(e.ctrlKey&&e.key==='\\'){e.preventDefault();document.getElementById('sidebar').classList.toggle('collapsed')}
   if(e.key==='/'&&document.activeElement!==$('search-input')&&!S.cm?.hasFocus()){e.preventDefault();$('search-input').focus()}
-  if(e.key==='Escape'){if($('vm-overlay').classList.contains('visible'))hideM('vm-overlay');else if($('nf-overlay').classList.contains('visible'))hideM('nf-overlay');else if($('search-results').classList.contains('visible')){$('search-input').value='';$('search-results').classList.remove('visible');if(S.activeFile)showEditorPane();else $('welcome').style.display=''}}
+  if(e.key==='Escape'){if($('st-overlay').classList.contains('visible'))hideM('st-overlay');else if($('vm-overlay').classList.contains('visible'))hideM('vm-overlay');else if($('nf-overlay').classList.contains('visible'))hideM('nf-overlay');else if($('search-results').classList.contains('visible')){$('search-input').value='';$('search-results').classList.remove('visible');if(S.activeFile)showEditorPane();else $('welcome').style.display=''}}
 });
 
-loadVaults();
+loadSettings().then(()=>loadVaults());
 </script>
 </body>
 </html>
