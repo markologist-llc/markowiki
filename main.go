@@ -15,7 +15,7 @@ import (
 //go:embed index.html
 var indexHTML []byte
 
-var version = "1.0.0"
+var version = "1.1.0"
 var appName = "MarkoWiki"
 
 // ── Data types ────────────────────────────────────────────────────────────────
