@@ -83,9 +83,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #topbar{height:var(--header-h);display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
 #toggle-sidebar{background:none;border:none;color:var(--text-dim);cursor:pointer;padding:4px;border-radius:4px;transition:color var(--trans);font-size:15px;line-height:1}
 #toggle-sidebar:hover{color:var(--text)}
-#breadcrumb{flex:1;display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-dim);overflow:hidden;white-space:nowrap}
+#breadcrumb{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-dim);overflow:hidden;white-space:nowrap;min-width:0;max-width:220px}
 .bc-last{color:var(--text);font-weight:500}
-#topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+/* toolbar toggle in topbar */
+#toggle-tb-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px 6px;border-radius:4px;font-size:12px;transition:color var(--trans);flex-shrink:0}
+#toggle-tb-btn:hover{color:var(--accent)}
 .view-tabs{display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:var(--radius);border:1px solid var(--border)}
 .view-tab{background:none;border:none;color:var(--text-dim);font-family:var(--font-ui);font-size:11px;padding:3px 8px;cursor:pointer;border-radius:4px;transition:all var(--trans)}
 .view-tab.active{background:var(--bg2);color:var(--text)}
@@ -263,6 +265,54 @@ kbd{font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px
 .merr{font-size:12px;color:var(--danger);margin-top:8px;display:none}
 .merr.visible{display:block}
 
+/* Blocks dropdown */
+.blocks-selector{position:relative}
+.blocks-dropdown{display:none;position:absolute;left:0;top:calc(100% + 4px);background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px;min-width:200px;max-height:320px;overflow-y:auto;z-index:50;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.blocks-selector.open .blocks-dropdown{display:block}
+.blocks-dropdown::-webkit-scrollbar{width:4px}
+.blocks-dropdown::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.block-option{display:flex;align-items:center;padding:7px 10px;cursor:pointer;border-radius:4px;font-size:12px;color:var(--text-dim);transition:all var(--trans);gap:8px}
+.block-option:hover{background:var(--bg3);color:var(--text)}
+.block-option i{color:var(--accent-dim);font-size:11px}
+.blocks-manage{border-top:1px solid var(--border);margin-top:4px;padding-top:4px}
+.blocks-empty{padding:10px;font-size:12px;color:var(--text-muted);text-align:center;font-family:var(--font-mono)}
+
+/* Block placeholder mark in editor */
+.cm-block-ph{background:var(--accent-muted);color:var(--accent);border-radius:3px;padding:0 4px;cursor:pointer;font-style:normal;border:1px solid var(--accent-dim)}
+.cm-block-ph:hover{background:var(--accent-dim);color:var(--bg)}
+.cm-block-ph-list{background:var(--accent-muted);color:var(--accent-warm);border-radius:3px;padding:0 4px;cursor:pointer;font-style:normal;border:1px solid var(--accent-warm)}
+.cm-block-ph-list:hover{background:var(--accent-warm);color:var(--bg)}
+
+/* Block popup backdrop */
+#block-popup-backdrop{position:fixed;inset:0;z-index:199;display:none}
+#block-popup-backdrop.visible{display:block}
+#block-popup{position:fixed;background:var(--bg2);border:1px solid var(--accent-dim);border-radius:8px;padding:14px;min-width:180px;max-width:320px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.7);display:none}
+#block-popup.visible{display:block}
+#block-popup-title{font-size:11px;color:var(--text-dim);margin-bottom:10px;font-family:var(--font-mono)}
+.ph-list-options{display:flex;flex-wrap:wrap;gap:6px}
+.ph-list-option{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 12px;font-size:12px;color:var(--text);cursor:pointer;transition:all var(--trans);font-family:var(--font-ui)}
+.ph-list-option:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-muted)}
+#block-popup-title{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:10px;font-family:var(--font-mono)}
+.popup-field{margin-bottom:8px}
+.popup-field label{display:block;font-size:10px;color:var(--text-dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em}
+.popup-field input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:5px 8px;outline:none;transition:border-color var(--trans)}
+.popup-field input:focus{border-color:var(--accent)}
+.popup-recents{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.recent-chip{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:2px 7px;font-size:11px;color:var(--text-dim);cursor:pointer;font-family:var(--font-mono);transition:all var(--trans)}
+.recent-chip:hover{border-color:var(--accent);color:var(--accent)}
+.popup-actions{display:flex;gap:6px;margin-top:10px;justify-content:flex-end}
+
+/* Manage blocks modal */
+.block-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px;transition:border-color var(--trans)}
+.block-item:hover{border-color:var(--accent-dim)}
+.block-item-title{flex:1;font-size:13px;color:var(--text);font-weight:500}
+.block-item-schema{font-size:11px;color:var(--text-dim);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.block-edit-btn,.block-del-btn{background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:3px;font-size:12px;transition:color var(--trans)}
+.block-edit-btn{color:var(--text-dim)}
+.block-edit-btn:hover{color:var(--accent)}
+.block-del-btn{color:var(--text-dim)}
+.block-del-btn:hover{color:var(--danger)}
+
 /* View modes */
 #app.mode-editor #preview-pane{display:none}
 #app.mode-editor #editor-pane{border-right:none}
@@ -294,25 +344,25 @@ kbd{font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px
     <div id="topbar">
       <button id="toggle-sidebar" title="Toggle sidebar (Ctrl+\)">☰</button>
       <div id="breadcrumb"><span style="color:var(--text-muted);font-family:var(--font-mono)">markowiki</span></div>
-      <div id="topbar-right">
-        <span id="save-indicator">—</span>
-        <div class="accent-picker" title="Accent colour">
-          <div class="ac-swatch active" data-accent="forest" style="background:#a3c46e" title="Forest"></div>
-          <div class="ac-swatch" data-accent="amber"  style="background:#c9a84c" title="Amber"></div>
-          <div class="ac-swatch" data-accent="ocean"  style="background:#6ea3c4" title="Ocean"></div>
-          <div class="ac-swatch" data-accent="rose"   style="background:#c46e9a" title="Rose"></div>
-          <div class="ac-swatch" data-accent="mono"   style="background:#8a9080" title="Mono"></div>
-        </div>
-        <div class="dm-toggle" id="dm-toggle" title="Dark / Light mode"><div class="dm-handle"></div></div>
-        <button id="settings-btn" title="Settings"><i class="fa-solid fa-gear"></i></button>
-        <div class="view-tabs">
-          <button class="view-tab" data-mode="editor">Edit</button>
-          <button class="view-tab active" data-mode="split">Split</button>
-          <button class="view-tab" data-mode="preview">View</button>
-        </div>
-        <button class="top-btn primary" id="save-btn" style="display:none"><i class="fa-solid fa-floppy-disk"></i> Save</button>
-        <button class="top-btn danger" id="delete-btn" title="Delete file" style="display:none"><i class="fa-solid fa-trash-can"></i></button>
+      <div class="view-tabs">
+        <button class="view-tab" data-mode="editor">Edit</button>
+        <button class="view-tab active" data-mode="split">Split</button>
+        <button class="view-tab" data-mode="preview">View</button>
       </div>
+      <div class="dm-toggle" id="dm-toggle" title="Dark / Light mode"><div class="dm-handle"></div></div>
+      <div class="accent-picker" title="Accent colour">
+        <div class="ac-swatch active" data-accent="forest" style="background:#a3c46e" title="Forest"></div>
+        <div class="ac-swatch" data-accent="amber"  style="background:#c9a84c" title="Amber"></div>
+        <div class="ac-swatch" data-accent="ocean"  style="background:#6ea3c4" title="Ocean"></div>
+        <div class="ac-swatch" data-accent="rose"   style="background:#c46e9a" title="Rose"></div>
+        <div class="ac-swatch" data-accent="mono"   style="background:#8a9080" title="Mono"></div>
+      </div>
+      <button id="settings-btn" title="Settings"><i class="fa-solid fa-gear"></i></button>
+      <div style="flex:1"></div>
+      <span id="save-indicator">—</span>
+      <button class="top-btn primary" id="save-btn" style="display:none"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+      <button class="top-btn danger" id="delete-btn" title="Delete file" style="display:none"><i class="fa-solid fa-trash-can"></i></button>
+      <button id="toggle-tb-btn" title="Toggle toolbar"><i class="fa-solid fa-chevron-up"></i></button>
     </div>
 
     <div id="toolbar">
@@ -339,7 +389,8 @@ kbd{font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px
       <div class="tb-div"></div>
       <button class="tb-btn" id="find-btn" title="Find (Ctrl+F)"><i class="fa-solid fa-magnifying-glass"></i></button>
       <button class="tb-btn" id="replace-btn" title="Replace (Ctrl+H)"><i class="fa-solid fa-right-left"></i></button>
-      <button class="tb-btn" id="toggle-tb-btn" title="Toggle toolbar" style="margin-left:auto"><i class="fa-solid fa-chevron-up"></i></button>
+      <div class="tb-div"></div>
+      <button class="tb-btn" id="blocks-btn" title="Custom blocks"><i class="fa-solid fa-puzzle-piece"></i> Blocks ▾</button>
     </div>
 
     <div id="editor-area">
@@ -386,6 +437,43 @@ kbd{font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px
     <div class="mfield"><label>Path relative to vault root</label><input id="nf-path" placeholder="folder/my-note" autocomplete="off"/></div>
     <div class="merr" id="nf-err"></div>
     <div class="mactions"><button class="top-btn" id="nf-cancel">Cancel</button><button class="top-btn primary" id="nf-ok">Create</button></div>
+  </div>
+</div>
+
+<!-- Blocks dropdown (portal, attached to body) -->
+<div id="blocks-dropdown" style="display:none;position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px;min-width:200px;max-height:320px;overflow-y:auto;z-index:1000;box-shadow:0 12px 40px rgba(0,0,0,.6)"></div>
+
+<!-- Block popup backdrop -->
+<div id="block-popup-backdrop"></div>
+
+<!-- Block placeholder popup -->
+<div id="block-popup">
+  <div id="block-popup-title"></div>
+  <div id="block-popup-fields"></div>
+  <div class="popup-actions" id="block-popup-actions" style="display:none">
+    <button class="top-btn" id="block-popup-cancel">Cancel</button>
+    <button class="top-btn primary" id="block-popup-insert">Replace</button>
+  </div>
+</div>
+
+<!-- Manage Blocks Modal -->
+<div class="moverlay" id="mb-overlay">
+  <div class="mbox" style="width:500px">
+    <h3>Custom Blocks</h3>
+    <div id="mb-list" style="margin-bottom:12px;max-height:300px;overflow-y:auto"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px">New block</div>
+      <div class="mfield"><label>Title</label><input id="mb-title" placeholder="e.g. Author Box" autocomplete="off"/></div>
+      <div class="mfield"><label>Schema — placeholder syntax</label>
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;font-family:var(--font-mono);line-height:1.8">
+          <span style="color:var(--accent)">{title}</span> free text &nbsp;·&nbsp;
+          <span style="color:var(--accent-warm)">{status:A,B,C}</span> pick list &nbsp;·&nbsp;
+          <span style="color:var(--text-dim)">{date} {time} {datetime} {year} {month} {day}</span> auto
+        </div>
+        <textarea id="mb-schema" rows="4" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:7px 10px;outline:none;resize:vertical;transition:border-color var(--trans)" placeholder="= Author: {name} ({date}) ="></textarea></div>
+      <div class="merr" id="mb-err"></div>
+    </div>
+    <div class="mactions"><button class="top-btn" id="mb-cancel">Close</button><button class="top-btn primary" id="mb-add">Add Block</button></div>
   </div>
 </div>
 
@@ -454,6 +542,9 @@ function initCM(){
   });
   S.cm.on('change',()=>{if(S.loading)return;setUnsaved();updatePreview();triggerAutosave()});
   S.cm.on('cursorActivity',updateCursor);
+
+  // Mark click handler for block placeholders
+  S.cm.getWrapperElement().addEventListener('mousedown',onMarkClick);
 }
 
 const snip={
@@ -470,10 +561,14 @@ document.querySelectorAll('.tb-btn[data-cmd]').forEach(b=>b.addEventListener('cl
 $('find-btn').addEventListener('click',()=>S.cm&&S.cm.execCommand('find'));
 $('replace-btn').addEventListener('click',()=>S.cm&&S.cm.execCommand('replace'));
 
-let tbHidden=localStorage.getItem('mw_tb')==='1';
-function applyTB(){$('toolbar').classList.toggle('hidden',tbHidden);$('toggle-tb-btn').querySelector('i').className=tbHidden?'fa-solid fa-chevron-down':'fa-solid fa-chevron-up'}
+let tbHidden=false;
+function applyTB(){
+  $('toolbar').classList.toggle('hidden',tbHidden);
+  $('toggle-tb-btn').querySelector('i').className=tbHidden?'fa-solid fa-chevron-down':'fa-solid fa-chevron-up';
+  setTimeout(()=>S.cm&&S.cm.refresh(),60);
+}
 applyTB();
-$('toggle-tb-btn').addEventListener('click',()=>{tbHidden=!tbHidden;localStorage.setItem('mw_tb',tbHidden?'1':'0');applyTB();setTimeout(()=>S.cm&&S.cm.refresh(),60)});
+$('toggle-tb-btn').addEventListener('click',()=>{tbHidden=!tbHidden;applyTB()});
 
 // Accent
 const accentMap={
@@ -557,8 +652,8 @@ $('st-overlay').addEventListener('click',e=>{if(e.target===$('st-overlay'))hideM
 function updatePreview(){
   if(!S.cm)return;
   const md=S.cm.getValue();
-  let html=marked.parse(md);
-  html=html.replace(/\$\$([\s\S]*?)\$\$/g,(_,eq)=>{try{return`<div class="katex-display">${katex.renderToString(eq.trim(),{displayMode:true,throwOnError:false})}</div>`}catch{return`<code>$$${eq}$$</code>`}});
+let html=marked.parse(md,{breaks:true});
+html=html.replace(/\$\$([\s\S]*?)\$\$/g,(_,eq)=>{try{return`<div class="katex-display">${katex.renderToString(eq.trim(),{displayMode:true,throwOnError:false})}</div>`}catch{return`<code>$$${eq}$$</code>`}});
   html=html.replace(/\$((?!\$)[^\n]*?)\$/g,(_,eq)=>{try{return`<span style="display:inline-block;direction:ltr">${katex.renderToString(eq.trim(),{displayMode:false,throwOnError:false})}</span>`}catch{return`<code>$${eq}$</code>`}});
   $('preview-content').innerHTML=DOMPurify.sanitize(html,{ADD_TAGS:['math','mrow','mi','mo','mn','msup','msub','mfrac','semantics','annotation'],ADD_ATTR:['display','dir','style','class','xmlns']});
   const words=md.trim()?md.trim().split(/\s+/).length:0;
@@ -661,10 +756,248 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='k'){e.preventDefault();$('search-input').focus();$('search-input').select()}
   if(e.ctrlKey&&e.key==='\\'){e.preventDefault();document.getElementById('sidebar').classList.toggle('collapsed')}
   if(e.key==='/'&&document.activeElement!==$('search-input')&&!S.cm?.hasFocus()){e.preventDefault();$('search-input').focus()}
-  if(e.key==='Escape'){if($('st-overlay').classList.contains('visible'))hideM('st-overlay');else if($('vm-overlay').classList.contains('visible'))hideM('vm-overlay');else if($('nf-overlay').classList.contains('visible'))hideM('nf-overlay');else if($('search-results').classList.contains('visible')){$('search-input').value='';$('search-results').classList.remove('visible');if(S.activeFile)showEditorPane();else $('welcome').style.display=''}}
+  if(e.key==='Escape'){if($('block-popup').classList.contains('visible'))closeBlockPopup();else if($('st-overlay').classList.contains('visible'))hideM('st-overlay');else if($('mb-overlay').classList.contains('visible')){hideM('mb-overlay');$('mb-add').textContent='Add Block';delete $('mb-add').dataset.editId}else if($('vm-overlay').classList.contains('visible'))hideM('vm-overlay');else if($('nf-overlay').classList.contains('visible'))hideM('nf-overlay');else if($('search-results').classList.contains('visible')){$('search-input').value='';$('search-results').classList.remove('visible');if(S.activeFile)showEditorPane();else $('welcome').style.display=''}}
 });
 
-loadSettings().then(()=>loadVaults());
+// ── Blocks system ──
+let allBlocks=[];
+let activeMarks=[]; // {mark, phName, phType, options:[]}
+let activePHMark=null;
+
+// Auto keyword resolver
+function resolveAuto(key){
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const map={
+    date:`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`,
+    time:`${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    datetime:`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    year:String(now.getFullYear()),
+    month:pad(now.getMonth()+1),
+    day:pad(now.getDate())
+  };
+  return map[key.toLowerCase()]||null;
+}
+
+// Parse placeholder: returns {name, type:'auto'|'list'|'free', options:[]}
+function parsePH(raw){
+  const auto=resolveAuto(raw);
+  if(auto!==null)return{name:raw,type:'auto',value:auto,options:[]};
+  const colon=raw.indexOf(':');
+  if(colon>0){
+    const name=raw.slice(0,colon).trim();
+    const options=raw.slice(colon+1).split(',').map(s=>s.trim()).filter(Boolean);
+    return{name,type:'list',options};
+  }
+  return{name:raw,type:'free',options:[]};
+}
+
+async function loadBlocks(){
+  try{allBlocks=await api('GET','/api/blocks')}catch(e){allBlocks=[]}
+  renderBlocksDropdown();
+}
+
+function renderBlocksDropdown(){
+  const dd=$('blocks-dropdown');
+  dd.innerHTML='';
+  if(!allBlocks.length){
+    dd.innerHTML='<div class="blocks-empty">No blocks yet.<br>Click Manage to add one.</div>';
+  } else {
+    allBlocks.forEach(b=>{
+      const el=document.createElement('div');
+      el.className='block-option';
+      el.innerHTML=`<i class="fa-solid fa-puzzle-piece"></i><span>${b.title}</span>`;
+      el.addEventListener('click',()=>{$('blocks-dropdown').style.display='none';insertBlockDirect(b)});
+      dd.appendChild(el);
+    });
+  }
+  const mgr=document.createElement('div');
+  mgr.className='blocks-manage';
+  mgr.innerHTML='<div class="block-option"><i class="fa-solid fa-gear"></i><span>Manage blocks…</span></div>';
+  mgr.querySelector('.block-option').addEventListener('click',()=>{$('blocks-dropdown').style.display='none';openManageBlocks()});
+  dd.appendChild(mgr);
+}
+
+$('blocks-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  const dd=$('blocks-dropdown');
+  const isOpen=dd.style.display==='block';
+  if(isOpen){dd.style.display='none';return}
+  const rect=$('blocks-btn').getBoundingClientRect();
+  dd.style.top=(rect.bottom+4)+'px';
+  dd.style.left=rect.left+'px';
+  dd.style.display='block';
+});
+document.addEventListener('click',e=>{
+  if(!$('blocks-btn').contains(e.target)&&!$('blocks-dropdown').contains(e.target))
+    $('blocks-dropdown').style.display='none';
+});
+
+// Insert block — resolve auto, mark list/free
+function insertBlockDirect(block){
+  if(!S.cm)return;
+  const cursor=S.cm.getCursor();
+
+  // First pass: resolve all auto placeholders in schema
+  let schema=block.schema;
+  schema=schema.replace(/\{([^}]+)\}/g,(_,raw)=>{
+    const ph=parsePH(raw);
+    return ph.type==='auto'?ph.value:`{${raw}}`;
+  });
+
+  S.cm.replaceSelection(schema);
+  updatePreview();
+
+  // Second pass: find and mark remaining {placeholders}
+  const lines=schema.split('\n');
+  lines.forEach((line,li)=>{
+    const re=/\{([^}]+)\}/g;
+    let m;
+    while((m=re.exec(line))!==null){
+      const ph=parsePH(m[1]);
+      if(ph.type==='auto')continue; // already replaced
+      const fromCh=li===0?cursor.ch+m.index:m.index;
+      const from={line:cursor.line+li,ch:fromCh};
+      const to={line:cursor.line+li,ch:fromCh+m[0].length};
+      const cls=ph.type==='list'?'cm-block-ph-list':'cm-block-ph';
+      const mark=S.cm.markText(from,to,{
+        className:cls,
+        title:ph.type==='list'?`Click to pick ${ph.name}`:`Click to edit ${ph.name}`,
+        atomic:true,
+        clearWhenEmpty:false
+      });
+      activeMarks.push({mark,phName:ph.name,phType:ph.type,options:ph.options});
+    }
+  });
+}
+
+// Mark click handler — attached inside initCM
+function onMarkClick(e){
+  const target=e.target.closest('.cm-block-ph,.cm-block-ph-list');
+  if(!target)return;
+  e.preventDefault();e.stopPropagation();
+  const pos=S.cm.coordsChar({left:e.clientX,top:e.clientY},'window');
+  const marks=S.cm.findMarksAt(pos);
+  const found=marks.find(m=>activeMarks.some(am=>am.mark===m));
+  if(!found)return;
+  const am=activeMarks.find(x=>x.mark===found);
+  if(!am)return;
+
+  if(am.phType==='free'){
+    // Select the mark range so user can type to replace
+    const range=am.mark.find();
+    if(range){
+      am.mark.clear();
+      activeMarks=activeMarks.filter(x=>x.mark!==am.mark);
+      S.cm.setSelection(range.from,range.to);
+      S.cm.focus();
+    }
+  } else if(am.phType==='list'){
+    openListPopup(am,e.clientX,e.clientY);
+  }
+}
+
+// List popup — just option buttons, no input
+function openListPopup(am,x,y){
+  activePHMark=am;
+  $('block-popup-title').textContent=`Pick ${am.phName}`;
+  $('block-popup-actions').style.display='none';
+  const fields=$('block-popup-fields');
+  fields.innerHTML='';
+  const opts=document.createElement('div');
+  opts.className='ph-list-options';
+  am.options.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.className='ph-list-option';
+    btn.textContent=opt;
+    btn.addEventListener('click',()=>commitListReplace(opt));
+    opts.appendChild(btn);
+  });
+  fields.appendChild(opts);
+
+  const popup=$('block-popup');
+  let px=x+8,py=y+8;
+  if(px+300>window.innerWidth)px=window.innerWidth-310;
+  if(py+200>window.innerHeight)py=y-120;
+  popup.style.left=px+'px';popup.style.top=py+'px';
+  $('block-popup-backdrop').classList.add('visible');
+  popup.classList.add('visible');
+}
+
+function commitListReplace(val){
+  if(!activePHMark)return;
+  const range=activePHMark.mark.find();
+  if(range){
+    S.cm.replaceRange(val,range.from,range.to);
+    activeMarks=activeMarks.filter(x=>x.mark!==activePHMark.mark);
+    activePHMark.mark.clear();
+    updatePreview();
+  }
+  closePHPopup();
+}
+
+function closePHPopup(){
+  $('block-popup').classList.remove('visible');
+  $('block-popup-backdrop').classList.remove('visible');
+  activePHMark=null;
+}
+
+$('block-popup-cancel').addEventListener('click',closePHPopup);
+$('block-popup-backdrop').addEventListener('click',closePHPopup);
+$('block-popup').addEventListener('keydown',e=>{if(e.key==='Escape')closePHPopup()});
+
+// Manage blocks modal
+function openManageBlocks(){
+  renderMBList();
+  $('mb-title').value='';$('mb-schema').value='';
+  $('mb-err').classList.remove('visible');
+  showM('mb-overlay');
+  setTimeout(()=>$('mb-title').focus(),50);
+}
+
+function renderMBList(){
+  const list=$('mb-list');
+  list.innerHTML='';
+  if(!allBlocks.length){
+    list.innerHTML='<div style="font-size:12px;color:var(--text-muted);padding:8px 0">No blocks yet. Add one below.</div>';
+    return;
+  }
+  allBlocks.forEach(b=>{
+    const el=document.createElement('div');
+    el.className='block-item';
+    el.innerHTML=`<div style="flex:1;min-width:0"><div class="block-item-title">${b.title}</div><div class="block-item-schema">${b.schema.replace(/\n/g,' ')}</div></div><button class="block-edit-btn" title="Edit"><i class="fa-solid fa-pen"></i></button><button class="block-del-btn" title="Delete"><i class="fa-solid fa-trash-can"></i></button>`;
+    el.querySelector('.block-del-btn').addEventListener('click',async()=>{
+      if(!confirm('Delete "'+b.title+'"?'))return;
+      await api('DELETE',`/api/blocks/${b.id}`);
+      await loadBlocks();renderMBList();
+    });
+    el.querySelector('.block-edit-btn').addEventListener('click',()=>{
+      $('mb-title').value=b.title;$('mb-schema').value=b.schema;
+      $('mb-add').textContent='Update Block';$('mb-add').dataset.editId=b.id;
+      $('mb-title').focus();
+    });
+    list.appendChild(el);
+  });
+}
+
+$('mb-cancel').addEventListener('click',()=>{hideM('mb-overlay');$('mb-add').textContent='Add Block';delete $('mb-add').dataset.editId});
+$('mb-overlay').addEventListener('click',e=>{if(e.target===$('mb-overlay')){hideM('mb-overlay');$('mb-add').textContent='Add Block';delete $('mb-add').dataset.editId}});
+$('mb-add').addEventListener('click',async()=>{
+  const title=$('mb-title').value.trim();
+  const schema=$('mb-schema').value.trim();
+  if(!title||!schema){showErr('mb-err','Title and schema required.');return}
+  const editId=$('mb-add').dataset.editId;
+  try{
+    if(editId){await api('PUT',`/api/blocks/${editId}`,{title,schema})}
+    else{await api('POST','/api/blocks',{title,schema})}
+    await loadBlocks();renderMBList();
+    $('mb-title').value='';$('mb-schema').value='';
+    $('mb-add').textContent='Add Block';delete $('mb-add').dataset.editId;
+    $('mb-err').classList.remove('visible');
+  }catch(e){showErr('mb-err',e.message)}
+});
+
+loadSettings().then(()=>{loadVaults();loadBlocks()});
 </script>
 </body>
 </html>

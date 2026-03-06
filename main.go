@@ -33,9 +33,17 @@ type Settings struct {
 	Accent        string `json:"accent"`
 }
 
+type Block struct {
+	ID      string              `json:"id"`
+	Title   string              `json:"title"`
+	Schema  string              `json:"schema"`
+	Recents map[string][]string `json:"recents,omitempty"`
+}
+
 type Config struct {
 	Vaults   []Vault  `json:"vaults"`
 	Settings Settings `json:"settings"`
+	Blocks   []Block  `json:"blocks"`
 }
 
 type TreeNode struct {
@@ -66,6 +74,7 @@ func configPath() string {
 func defaultConfig() Config {
 	return Config{
 		Vaults: []Vault{},
+		Blocks: []Block{},
 		Settings: Settings{
 			Autosave:      false,
 			AutosaveDelay: 2,
@@ -425,6 +434,158 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, results)
 }
 
+// ── Blocks ────────────────────────────────────────────────────────────────────
+
+func extractPlaceholders(schema string) []string {
+	re := regexp.MustCompile(`\{([^}]+)\}`)
+	matches := re.FindAllStringSubmatch(schema, -1)
+	seen := map[string]bool{}
+	var out []string
+	for _, m := range matches {
+		if !seen[m[1]] {
+			seen[m[1]] = true
+			out = append(out, m[1])
+		}
+	}
+	return out
+}
+
+// GET/POST /api/blocks
+func handleBlocks(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		cfg, err := loadConfig()
+		if err != nil {
+			writeError(w, 500, err.Error())
+			return
+		}
+		if cfg.Blocks == nil {
+			cfg.Blocks = []Block{}
+		}
+		writeJSON(w, 200, cfg.Blocks)
+
+	case http.MethodPost:
+		var b Block
+		if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+			writeError(w, 400, "invalid JSON")
+			return
+		}
+		b.Title = strings.TrimSpace(b.Title)
+		b.Schema = strings.TrimSpace(b.Schema)
+		if b.Title == "" || b.Schema == "" {
+			writeError(w, 400, "title and schema required")
+			return
+		}
+		cfg, _ := loadConfig()
+		b.ID = fmt.Sprintf("blk_%s_%d", slugify(b.Title), len(cfg.Blocks))
+		if b.Recents == nil {
+			b.Recents = map[string][]string{}
+		}
+		cfg.Blocks = append(cfg.Blocks, b)
+		if err := saveConfig(cfg); err != nil {
+			writeError(w, 500, err.Error())
+			return
+		}
+		writeJSON(w, 200, b)
+
+	default:
+		writeError(w, 405, "method not allowed")
+	}
+}
+
+// PUT/DELETE /api/blocks/{id}
+func handleBlockByID(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/blocks/")
+
+	switch r.Method {
+	case http.MethodPut:
+		var b Block
+		if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+			writeError(w, 400, "invalid JSON")
+			return
+		}
+		cfg, _ := loadConfig()
+		for i, blk := range cfg.Blocks {
+			if blk.ID == id {
+				b.ID = id
+				if b.Recents == nil {
+					b.Recents = blk.Recents // preserve recents on edit
+				}
+				cfg.Blocks[i] = b
+				saveConfig(cfg)
+				writeJSON(w, 200, b)
+				return
+			}
+		}
+		writeError(w, 404, "block not found")
+
+	case http.MethodDelete:
+		cfg, _ := loadConfig()
+		filtered := cfg.Blocks[:0]
+		for _, blk := range cfg.Blocks {
+			if blk.ID != id {
+				filtered = append(filtered, blk)
+			}
+		}
+		cfg.Blocks = filtered
+		saveConfig(cfg)
+		writeJSON(w, 200, map[string]bool{"ok": true})
+
+	default:
+		writeError(w, 405, "method not allowed")
+	}
+}
+
+// POST /api/blocks/{id}/recents  — update recent values for placeholders
+func handleBlockRecents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, 405, "method not allowed")
+		return
+	}
+	// path: /api/blocks/{id}/recents
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 5 {
+		writeError(w, 400, "bad url")
+		return
+	}
+	id := parts[3]
+	var values map[string]string // placeholder -> value used
+	if err := json.NewDecoder(r.Body).Decode(&values); err != nil {
+		writeError(w, 400, "invalid JSON")
+		return
+	}
+	cfg, _ := loadConfig()
+	for i, blk := range cfg.Blocks {
+		if blk.ID == id {
+			if blk.Recents == nil {
+				blk.Recents = map[string][]string{}
+			}
+			for k, v := range values {
+				if v == "" {
+					continue
+				}
+				list := blk.Recents[k]
+				// Remove if already exists (move to front)
+				newList := []string{v}
+				for _, existing := range list {
+					if existing != v {
+						newList = append(newList, existing)
+					}
+				}
+				if len(newList) > 3 {
+					newList = newList[:3]
+				}
+				blk.Recents[k] = newList
+			}
+			cfg.Blocks[i] = blk
+			saveConfig(cfg)
+			writeJSON(w, 200, blk.Recents)
+			return
+		}
+	}
+	writeError(w, 404, "block not found")
+}
+
 // GET/PUT /api/settings
 func handleSettings(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -477,6 +638,14 @@ func main() {
 			handleVaultTree(w, r)
 		} else {
 			handleVaultDelete(w, r)
+		}
+	})
+	mux.HandleFunc("/api/blocks", handleBlocks)
+	mux.HandleFunc("/api/blocks/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/recents") {
+			handleBlockRecents(w, r)
+		} else {
+			handleBlockByID(w, r)
 		}
 	})
 	mux.HandleFunc("/api/file/create", handleFileCreate)
